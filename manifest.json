@@ -1,0 +1,10 @@
+{
+  "name": "Tether",
+  "author": "Robbin Thijssen",
+  "version_number": "1.0.0",
+  "website_url": "",
+  "description": "Link one chest to one crafting bench.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2333"
+  ]
+}
