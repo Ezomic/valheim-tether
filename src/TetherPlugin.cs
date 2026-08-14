@@ -10,7 +10,7 @@ namespace Tether
     [BepInProcess("valheim.exe")]
     public class TetherPlugin : BaseUnityPlugin
     {
-        public const string PluginGuid = "robbin.valheim.tether";
+        public const string PluginGuid = "ezomic.valheim.tether";
         public const string PluginName = "Tether";
         public const string PluginVersion = "0.1.0";
         public const string PluginAuthor = "Robbin Thijssen";
