@@ -5,12 +5,18 @@ using UnityEngine;
 namespace Tether
 {
     /// <summary>
-    /// Which chest belongs to which bench.
+    /// Which chest belongs to which station.
     ///
     /// The link is stored on the *station's* ZDO, not the chest's, and that is what makes
-    /// the one-chest-per-bench rule structural rather than something to enforce: a station
-    /// holds one value, so tethering a second chest replaces the first. A chest is free to
-    /// serve more than one bench, which is a different question and deliberately allowed.
+    /// the one-chest-per-station rule structural rather than something to enforce: a
+    /// station holds one value, so tethering a second chest replaces the first. A chest is
+    /// free to serve any number of stations, which is a different question and deliberately
+    /// allowed - that is the one-to-many part.
+    ///
+    /// Targets are GameObjects rather than CraftingStations because a smelter is not a
+    /// crafting station. Everything here needs from a target is a ZNetView and a position,
+    /// both of which live on the GameObject, so widening the type was enough to let kilns
+    /// and smelters be tethered on the same footing as a workbench.
     ///
     /// The chest is remembered by position rather than by ZDOID because a position survives
     /// being looked up from either side, and a container that has been torn down simply
@@ -52,55 +58,146 @@ namespace Tether
 
         // ------------------------------------------------------------------ linking
 
-        public static void Link(CraftingStation station, Container container)
+        public static void Link(GameObject target, Container container)
         {
-            var zdo = Zdo(station);
+            var zdo = Zdo(target);
             if (zdo == null) return;
 
             zdo.Set(ZChest, container.transform.position);
             zdo.Set(ZHasChest, true);
         }
 
-        public static void Unlink(CraftingStation station)
+        public static void Unlink(GameObject target)
         {
-            var zdo = Zdo(station);
+            var zdo = Zdo(target);
             if (zdo == null) return;
 
             zdo.Set(ZHasChest, false);
         }
 
-        public static bool TryGetChest(CraftingStation station, out Container container)
+        public static bool TryGetChest(GameObject target, out Container container)
         {
             container = null;
 
-            var zdo = Zdo(station);
+            var zdo = Zdo(target);
             if (zdo == null || !zdo.GetBool(ZHasChest, false)) return false;
 
             container = FindContainer(zdo.GetVec3(ZChest, Vector3.zero));
             return container != null;
         }
 
-        /// <summary>The station a tether would attach to: the nearest one you can build at.</summary>
-        public static CraftingStation NearestStation(Vector3 point)
-        {
-            var stations = AllStations.GetValue(null) as List<CraftingStation>;
-            if (stations == null) return null;
+        // ------------------------------------------------------------------ finding
 
-            CraftingStation best = null;
+        /// <summary>
+        /// The target a tether would attach to: the nearest thing you could work at.
+        ///
+        /// Two different notions of range, because the game has two. A crafting station
+        /// carries its own m_rangeBuild and that is the honest answer for benches. A smelter
+        /// has no such field, so it gets a configured radius instead.
+        /// </summary>
+        public static GameObject NearestTarget(Vector3 point)
+        {
+            GameObject best = null;
             var bestDistance = float.MaxValue;
 
-            foreach (var station in stations)
+            var stations = AllStations.GetValue(null) as List<CraftingStation>;
+            if (stations != null)
             {
-                if (station == null) continue;
+                foreach (var station in stations)
+                {
+                    if (station == null) continue;
 
-                var distance = Vector3.Distance(station.transform.position, point);
-                if (distance > station.m_rangeBuild || distance >= bestDistance) continue;
+                    var distance = Vector3.Distance(station.transform.position, point);
+                    if (distance > station.m_rangeBuild || distance >= bestDistance) continue;
 
-                best = station;
+                    best = station.gameObject;
+                    bestDistance = distance;
+                }
+            }
+
+            var range = TetherConfig.SmelterRange.Value;
+            var count = Physics.OverlapSphereNonAlloc(point, range, Hits);
+
+            for (var i = 0; i < count; i++)
+            {
+                var smelter = Hits[i].GetComponentInParent<Smelter>();
+                if (smelter == null) continue;
+
+                var distance = Vector3.Distance(smelter.transform.position, point);
+                if (distance > range || distance >= bestDistance) continue;
+
+                best = smelter.gameObject;
                 bestDistance = distance;
             }
 
             return best;
+        }
+
+        /// <summary>Every target in reach, so one chest can be offered to all of them.</summary>
+        public static void TargetsNear(Vector3 point, List<GameObject> into)
+        {
+            into.Clear();
+
+            var stations = AllStations.GetValue(null) as List<CraftingStation>;
+            if (stations != null)
+            {
+                foreach (var station in stations)
+                {
+                    if (station == null) continue;
+                    if (Vector3.Distance(station.transform.position, point) > station.m_rangeBuild) continue;
+                    if (!into.Contains(station.gameObject)) into.Add(station.gameObject);
+                }
+            }
+
+            var range = TetherConfig.SmelterRange.Value;
+            var count = Physics.OverlapSphereNonAlloc(point, range, Hits);
+
+            for (var i = 0; i < count; i++)
+            {
+                var smelter = Hits[i].GetComponentInParent<Smelter>();
+                if (smelter == null) continue;
+                if (Vector3.Distance(smelter.transform.position, point) > range) continue;
+                if (!into.Contains(smelter.gameObject)) into.Add(smelter.gameObject);
+            }
+        }
+
+        public static Container NearestContainer(Vector3 point, float range)
+        {
+            var count = Physics.OverlapSphereNonAlloc(point, range, Hits);
+
+            Container best = null;
+            var bestDistance = float.MaxValue;
+
+            for (var i = 0; i < count; i++)
+            {
+                var container = Hits[i].GetComponentInParent<Container>();
+                if (container == null) continue;
+
+                var nview = container.GetComponent<ZNetView>();
+                if (nview == null || !nview.IsValid()) continue;
+
+                var distance = Vector3.Distance(container.transform.position, point);
+                if (distance >= bestDistance) continue;
+
+                best = container;
+                bestDistance = distance;
+            }
+
+            return best;
+        }
+
+        /// <summary>What to call a target in a message - its own name, not the prefab's.</summary>
+        public static string NameOf(GameObject target)
+        {
+            if (target == null) return "";
+
+            var station = target.GetComponent<CraftingStation>();
+            if (station != null) return station.m_name;
+
+            var smelter = target.GetComponent<Smelter>();
+            if (smelter != null) return smelter.m_name;
+
+            return target.name;
         }
 
         /// <summary>
@@ -120,7 +217,7 @@ namespace Tether
             {
                 if (station == null) continue;
                 if (Vector3.Distance(station.transform.position, point) > station.m_rangeBuild) continue;
-                if (!TryGetChest(station, out var container)) continue;
+                if (!TryGetChest(station.gameObject, out var container)) continue;
                 if (!into.Contains(container)) into.Add(container);
             }
         }
@@ -151,11 +248,11 @@ namespace Tether
             return null;
         }
 
-        private static ZDO Zdo(CraftingStation station)
+        private static ZDO Zdo(GameObject target)
         {
-            if (station == null) return null;
+            if (target == null) return null;
 
-            var nview = station.GetComponent<ZNetView>();
+            var nview = target.GetComponent<ZNetView>();
             return nview != null && nview.IsValid() ? nview.GetZDO() : null;
         }
     }

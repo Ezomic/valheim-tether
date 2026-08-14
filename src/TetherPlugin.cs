@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -57,12 +58,17 @@ namespace Tether
         }
 
         /// <summary>
-        /// Look at a chest, press the key, and it belongs to the nearest bench. Press again
-        /// and it does not.
+        /// Press the key at either end of the link and the right thing happens.
         ///
-        /// One step rather than two - no selecting a bench first - because the bench is
-        /// never ambiguous in practice: you are standing at it. It is also the same verb
-        /// Thralls already uses for setting a drop-off chest, so it needs no learning.
+        /// Which end you are looking at changes what the press means, because the useful
+        /// answer is different from each side. From a chest you almost always want it
+        /// serving everything around you, so that ties it to every station in range at once
+        /// - the one-to-many case. From a single station you want just that one, so it takes
+        /// the nearest chest and leaves its neighbours alone.
+        ///
+        /// One step rather than two either way - no selecting a partner first - because the
+        /// thing you are standing at is never ambiguous in practice. It is also the same
+        /// verb Thralls already uses for setting a drop-off chest, so it needs no learning.
         /// </summary>
         private static void ToggleTether(Player player)
         {
@@ -70,24 +76,79 @@ namespace Tether
             if (hovering == null) return;
 
             var container = hovering.GetComponentInParent<Container>();
-            if (container == null) return;
+            if (container != null) { ToggleFromChest(container); return; }
 
-            var station = TetherLinks.NearestStation(container.transform.position);
-            if (station == null)
+            // A smelter is not a CraftingStation, so both have to be asked for by name.
+            var station = hovering.GetComponentInParent<CraftingStation>();
+            var smelter = hovering.GetComponentInParent<Smelter>();
+
+            var target = station != null ? station.gameObject
+                       : smelter != null ? smelter.gameObject
+                       : null;
+
+            if (target != null) ToggleFromStation(target);
+        }
+
+        /// <summary>
+        /// Ties one chest to everything in reach, or releases the lot.
+        ///
+        /// It only counts as a release when *every* target in range is already on this
+        /// chest. Otherwise the press links them all - so walking up to a half-tethered
+        /// cluster and pressing once finishes the job rather than undoing half of it.
+        /// </summary>
+        private static void ToggleFromChest(Container container)
+        {
+            var targets = new List<GameObject>();
+            TetherLinks.TargetsNear(container.transform.position, targets);
+
+            if (targets.Count == 0)
             {
-                Announce("No bench in range of that chest.");
+                Announce("Nothing in range of that chest to tether it to.");
                 return;
             }
 
-            if (TetherLinks.TryGetChest(station, out var current) && current == container)
+            var allLinked = true;
+            foreach (var target in targets)
             {
-                TetherLinks.Unlink(station);
-                Announce(container.m_name + " released from " + station.m_name + ".");
+                if (TetherLinks.TryGetChest(target, out var current) && current == container) continue;
+
+                allLinked = false;
+                break;
+            }
+
+            foreach (var target in targets)
+            {
+                if (allLinked) TetherLinks.Unlink(target);
+                else TetherLinks.Link(target, container);
+            }
+
+            Announce(allLinked
+                ? targets.Count + " released from " + container.m_name + "."
+                : targets.Count + " tethered to " + container.m_name + ".");
+        }
+
+        /// <summary>The other direction: this one station, and the chest nearest to it.</summary>
+        private static void ToggleFromStation(GameObject target)
+        {
+            var name = TetherLinks.NameOf(target);
+
+            if (TetherLinks.TryGetChest(target, out var current))
+            {
+                TetherLinks.Unlink(target);
+                Announce(name + " released from " + current.m_name + ".");
                 return;
             }
 
-            TetherLinks.Link(station, container);
-            Announce(container.m_name + " tethered to " + station.m_name + ".");
+            var container = TetherLinks.NearestContainer(target.transform.position,
+                                                         TetherConfig.SmelterRange.Value);
+            if (container == null)
+            {
+                Announce("No chest in range of " + name + ".");
+                return;
+            }
+
+            TetherLinks.Link(target, container);
+            Announce(name + " tethered to " + container.m_name + ".");
         }
 
         private static void Announce(string message)
