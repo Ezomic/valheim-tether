@@ -7,7 +7,9 @@ using UnityEngine;
 namespace Tether
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    [BepInProcess("valheim.exe")]
+    // No BepInProcess. The link is stored on the station's own ZDO, which the server owns
+    // whenever no client is near it, so the server needs to know the mod exists even though
+    // every decision here is made client-side.
     public class TetherPlugin : BaseUnityPlugin
     {
         public const string PluginGuid = "ezomic.valheim.tether";
