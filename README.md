@@ -76,7 +76,7 @@ once the core is confirmed working.
 
 ## Config
 
-`BepInEx\config\robbin.valheim.tether.cfg`
+`BepInEx\config\ezomic.valheim.tether.cfg`
 
 | Key | Default | What it does |
 | --- | --- | --- |
