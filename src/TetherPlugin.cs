@@ -1,12 +1,14 @@
 using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Logging;
+using Ezomic.Core;
 using HarmonyLib;
 using UnityEngine;
 
 namespace Tether
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
+    [BepInDependency("ezomic.valheim.core", BepInDependency.DependencyFlags.HardDependency)]
     // No BepInProcess. The link is stored on the station's own ZDO, which the server owns
     // whenever no client is near it, so the server needs to know the mod exists even though
     // every decision here is made client-side.
@@ -26,6 +28,11 @@ namespace Tether
         {
             Log = Logger;
             TetherConfig.Bind(Config);
+            // Everyone, not HostOnly. Both ends have to agree about this mod, and the
+            // disagreement is silent when they do not: a client that cannot resolve a prefab
+            // hash discards the ZDO rather than erroring - destroying what is already standing
+            // in the world - and item data that differs desyncs inventories.
+            Suite.Register(PluginGuid, PluginName, PluginVersion, Config);
 
             TetherLinks.Verify();
 
