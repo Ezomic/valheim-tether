@@ -5,6 +5,7 @@
   "website_url": "",
   "description": "Link one chest to one crafting bench.",
   "dependencies": [
+    "Ezomic-Core-0.2.0",
     "denikson-BepInExPack_Valheim-5.4.2333"
   ]
 }
