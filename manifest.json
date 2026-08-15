@@ -1,7 +1,7 @@
 {
   "name": "Tether",
   "author": "Robbin Thijssen",
-  "version_number": "1.0.0",
+  "version_number": "0.1.0",
   "website_url": "",
   "description": "Link one chest to one crafting bench.",
   "dependencies": [

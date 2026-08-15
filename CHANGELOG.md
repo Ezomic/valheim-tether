@@ -3,7 +3,7 @@
 Notable changes to Tether. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [1.0.0] — 2026-08-16
+## [0.1.0] — 2026-08-16
 
 First release.
 
@@ -45,6 +45,6 @@ serving more than one bench is a different question, and is allowed.
 
 ### Known limits
 
-- **Untested in a real session.** It builds and compiles; it has not been playtested. Treat
-  the version number as a statement about scope rather than about confidence — see the note
-  in the README.
+- **Untested in a real session.** It builds and compiles; it has not been playtested, which
+  is why this is 0.1 and not 1.0. The feature is complete as described above — what is
+  missing is evidence that it behaves.
