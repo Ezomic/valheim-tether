@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using Ezomic.Core;
 using HarmonyLib;
@@ -8,7 +10,10 @@ using UnityEngine;
 namespace Tether
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    [BepInDependency("ezomic.valheim.core", BepInDependency.DependencyFlags.HardDependency)]
+    // Soft, not hard. Tether installs and runs on its own; a hard dependency
+    // that is absent does not degrade, the plugin simply never loads. Soft still buys
+    // the load-order guarantee when Core is present, which is what registering needs.
+    [BepInDependency(CoreGuid, BepInDependency.DependencyFlags.SoftDependency)]
     // No BepInProcess. The link is stored on the station's own ZDO, which the server owns
     // whenever no client is near it, so the server needs to know the mod exists even though
     // every decision here is made client-side.
@@ -16,8 +21,11 @@ namespace Tether
     {
         public const string PluginGuid = "ezomic.valheim.tether";
         public const string PluginName = "Tether";
-        public const string PluginVersion = "0.1.0";
+        public const string PluginVersion = "0.2.0";
         public const string PluginAuthor = "Robbin Thijssen";
+
+        /// <summary>Core's plugin GUID. Optional - see TryRegisterWithCore.</summary>
+        private const string CoreGuid = "ezomic.valheim.core";
 
         internal static ManualLogSource Log;
 
@@ -28,6 +36,49 @@ namespace Tether
         {
             Log = Logger;
             TetherConfig.Bind(Config);
+            TryRegisterWithCore();
+
+            TetherLinks.Verify();
+
+            _harmony = new Harmony(PluginGuid);
+            _harmony.PatchAll(typeof(CraftingPatches));
+
+            Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
+        }
+
+        /// <summary>
+        /// Joins Core's version gate when Core is installed, and does nothing when it is not.
+        ///
+        /// Tether is worth installing on its own, and a hard dependency that is absent does
+        /// not degrade gracefully - the plugin never loads at all. So the reference is
+        /// compile-time only and the call is made behind a check.
+        ///
+        /// What is given up standing alone is the gate, not the mod.
+        /// Nothing refuses a client that lacks Tether, so two ends can disagree about what is in
+        /// reach with nothing to say so.
+        /// </summary>
+        private void TryRegisterWithCore()
+        {
+            if (!Chainloader.PluginInfos.ContainsKey(CoreGuid))
+            {
+                Log.LogInfo("Core not installed - running standalone, without the version gate.");
+                return;
+            }
+
+            RegisterWithCore();
+        }
+
+        /// <summary>
+        /// Kept separate and never inlined on purpose. The JIT resolves the assemblies a method
+        /// needs when it first compiles that method, so a Suite call sitting directly in Awake
+        /// would drag Ezomic.Core in before the check above could prevent it - and the
+        /// missing-assembly exception would land during plugin load, which is the failure this
+        /// whole arrangement exists to avoid. Isolating it means the type is only ever resolved
+        /// on a machine that has Core.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void RegisterWithCore()
+        {
             // Everyone rather than HostOnly, and worth stating honestly: this mod does not
             // have the failure mode Everyone exists for. That reading is for anything
             // registering a prefab or altering item data, where a client without the mod
@@ -44,14 +95,8 @@ namespace Tether
             // have it, and is arguably the right call - left as it is until multiplayer has
             // actually been played, since changing who gets refused is not a thing to guess at.
             Suite.Register(PluginGuid, PluginName, PluginVersion, Config);
-
-            TetherLinks.Verify();
-
-            _harmony = new Harmony(PluginGuid);
-            _harmony.PatchAll(typeof(CraftingPatches));
-
-            Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
         }
+
 
         private void OnDestroy()
         {
