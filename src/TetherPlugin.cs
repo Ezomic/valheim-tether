@@ -79,22 +79,31 @@ namespace Tether
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void RegisterWithCore()
         {
-            // Everyone rather than HostOnly, and worth stating honestly: this mod does not
-            // have the failure mode Everyone exists for. That reading is for anything
-            // registering a prefab or altering item data, where a client without the mod
-            // discards ZDOs it cannot resolve and destroys what is standing in the world.
-            // Tether registers neither. Its links are ordinary ZDO values on vanilla
-            // stations, which a vanilla client stores and ignores, so a mismatched party is
-            // merely a party where some people do not have the feature.
+            // Which of the two the gate gets is the server operator's call, not this mod's,
+            // because the honest answer differs per server rather than per mod.
             //
-            // What Everyone actually buys here is that nobody is quietly playing a different
-            // game: the host's settings are the ones in force for everyone connected, and a
-            // build mismatch is caught rather than showing up as one player's chest not
-            // working. The cost is that a friend without the mod is refused entry for a
-            // convenience feature. HostOnly would let them in and still check anyone who does
-            // have it, and is arguably the right call - left as it is until multiplayer has
-            // actually been played, since changing who gets refused is not a thing to guess at.
-            Suite.Register(PluginGuid, PluginName, PluginVersion, Config);
+            // Everyone refuses anybody who does not have Tether. Nothing here needs that for
+            // safety - the failure mode Everyone exists for is a mod registering a prefab or
+            // altering item data, where a client without it discards ZDOs it cannot resolve
+            // and destroys what is standing in the world. Tether registers neither, and its
+            // links are ordinary ZDO values on vanilla stations that a vanilla client stores
+            // and ignores. So a mixed party is merely a party where some people do not have
+            // the feature.
+            //
+            // It is still the right setting for a server where this is part of how the place
+            // plays, which is the case it defaults to. What it buys is that nobody is quietly
+            // playing a different game: the host's settings are in force for everyone, and a
+            // build mismatch is caught rather than surfacing as one player's chest not
+            // working. What it costs is a friend turned away over a convenience feature,
+            // which is why it is a line in a file rather than a decision made here.
+            //
+            // Reading the config here rather than in Awake is deliberate: this method is the
+            // one that may never run, and naming a Core type in Awake would resolve the
+            // assembly before the installed check could prevent it.
+            Suite.Register(PluginGuid, PluginName, PluginVersion, Config,
+                TetherConfig.RequireOnClients.Value
+                    ? Requirement.Everyone
+                    : Requirement.HostOnly);
         }
 
 

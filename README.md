@@ -4,8 +4,11 @@ One chest, one bench. Crafting at that bench can reach into that chest.
 
 ## Installing
 
-Needs BepInEx and Longhouse Core. Through a mod manager that is two installs and the manager
-handles the second one. By hand, put `Tether.dll` in `BepInEx/plugins/Tether/`.
+Needs BepInEx and nothing else. By hand, put `Tether.dll` in `BepInEx/plugins/Tether/`.
+
+[Longhouse Core](https://github.com/Ezomic/valheim-core) is optional. Installed, it is used;
+absent, nothing here works any less well. It matters only on a server, and only for the one
+thing described under Multiplayer.
 
 Start the game once and quit if you want the config file to edit. It does not exist until the
 mod has loaded once, which is the usual reason people think a setting is missing.
@@ -95,6 +98,7 @@ It does not abolish storage as a concern.
 | `PullAmount` | `3` | How much one press draws out of the chest |
 | `Messages` | `true` | Corner messages on tether and release |
 | `Verbose` | `false` | Log every withdrawal from a tethered chest |
+| `RequireOnClients` | `true` | Refuse players without Tether. Server side, and needs Core |
 
 Benches use their own build range rather than `SmelterRange`, because a crafting station
 carries that number itself and it is the honest answer for anything you can work at. A smelter
@@ -118,20 +122,29 @@ leave the smelter running itself, which is the thing the one-chest rule exists t
 
 ## Multiplayer
 
-Install it on the server as well as on every client. Core's version gate is set to require it
-on both ends, so a player without it is refused rather than let in with the feature missing.
+Install it on the server as well as on the clients. Links live on the station and are shared,
+so a chest one player tethers is tethered for everyone. Ownership of a chest is claimed before
+anything is taken out of it, because writing to a shared object you do not own is a change
+that may simply be discarded.
 
-Links live on the station and are shared, so a chest one player tethers is tethered for
-everyone. Ownership of a chest is claimed before anything is taken out of it, because writing
-to a shared object you do not own is a change that may simply be discarded.
+A mixed party is fine. Nothing here can damage a world for someone who does not have the mod:
+Tether adds no prefabs and no items, and a link is an ordinary value on a vanilla station that
+a vanilla client stores and ignores. Players without it simply do not have the feature.
+
+If you would rather they could not join at all, that is what Core is for. With Core installed
+on the server, `RequireOnClients` turns Tether into a requirement and a player without it is
+refused at the door with a message naming the mod, rather than let in to a game that quietly
+works differently for them. It is on by default, and does nothing without Core, since standing
+alone there is no handshake to refuse anyone with. Core also catches the case a version number
+cannot: same version on both ends, different build.
 
 Core also makes the host's settings the ones that count for as long as you are connected. A
-server that sets `Enabled = false` turns the mod off for everybody on it, and your own file is
+server setting `Enabled = false` turns the mod off for everybody on it, and your own file is
 untouched and comes back when you leave.
 
 ## Status
 
-Version 0.1. It builds, loads and passes the version gate. It has not been playtested, which
+Version 0.2. It builds and loads, standalone and with Core. It has not been playtested, which
 is the only reason it is not 1.0.
 
 ## Building
@@ -147,14 +160,3 @@ suite into the shared play profile instead.
 
 Tether is an original mod by Robbin Thijssen (Thijssen Software).
 Copyright (c) 2026 Robbin Thijssen. MIT licensed, see `LICENSE`.
-
-## Core is optional
-
-Tether installs and runs on its own. [Core](https://github.com/Ezomic/valheim-core) is a
-**soft** dependency: present, it is used; absent, nothing here is degraded. Installing
-Tether from Thunderstore no longer installs Core with it.
-
-What Core adds is the **version gate** — a handshake that compares mod versions and build
-ids on connect and refuses a client that does not match. Without it nothing reports two ends running different builds, so two clients can disagree about what is in reach with nothing to say so.
-
-Solo, none of that applies and Core is not needed at all.

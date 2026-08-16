@@ -7,13 +7,12 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Ezomic"
 name = "Tether"
-versionNumber = "0.1.0"
+versionNumber = "0.2.0"
 description = "One chest, one bench. Crafting there draws from that chest, and a tethered smelter takes its fuel from it."
 websiteUrl = "https://github.com/Ezomic/valheim-tether"
 containsNsfwContent = false
 
 [package.dependencies]
-Ezomic-Longhouse_Core = "0.2.0"
 denikson-BepInExPack_Valheim = "5.4.2333"
 
 [build]

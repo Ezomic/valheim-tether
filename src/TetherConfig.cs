@@ -12,6 +12,7 @@ namespace Tether
         public static ConfigEntry<float> SmelterRange;
         public static ConfigEntry<int> PullAmount;
         public static ConfigEntry<bool> Verbose;
+        public static ConfigEntry<bool> RequireOnClients;
 
         public static void Bind(ConfigFile config)
         {
@@ -44,6 +45,22 @@ namespace Tether
 
             Verbose = config.Bind("Diagnostics", "Verbose", false,
                 "Log every withdrawal made from a tethered chest.");
+
+            // Read on whichever end holds the file, but only a server can actually refuse
+            // anybody, so in practice this is the server's setting and a client's copy only
+            // governs what its own log complains about. Needs Core: standing alone there is
+            // no handshake to refuse anyone with, and this does nothing.
+            //
+            // It is read once, at startup, because that is when the mod declares itself to
+            // the gate. Changing it wants a restart of the server, not a reconnect.
+            RequireOnClients = config.Bind("Multiplayer", "RequireOnClients", true,
+                "Refuse players who do not have Tether. Only does anything on a server with "
+                + "Core installed. On means a player without the mod cannot join, which is "
+                + "what you want if the mod is part of how your server plays. Off lets them "
+                + "in without it, and anyone who does have it is still checked for a version "
+                + "or build mismatch - nothing here can corrupt a world either way, since "
+                + "Tether adds no prefabs and no items and its links are ordinary values a "
+                + "vanilla client stores and ignores.");
         }
     }
 }
