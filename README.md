@@ -147,3 +147,14 @@ suite into the shared play profile instead.
 
 Tether is an original mod by Robbin Thijssen (Thijssen Software).
 Copyright (c) 2026 Robbin Thijssen. MIT licensed, see `LICENSE`.
+
+## Core is optional
+
+Tether installs and runs on its own. [Core](https://github.com/Ezomic/valheim-core) is a
+**soft** dependency: present, it is used; absent, nothing here is degraded. Installing
+Tether from Thunderstore no longer installs Core with it.
+
+What Core adds is the **version gate** — a handshake that compares mod versions and build
+ids on connect and refuses a client that does not match. Without it nothing reports two ends running different builds, so two clients can disagree about what is in reach with nothing to say so.
+
+Solo, none of that applies and Core is not needed at all.
