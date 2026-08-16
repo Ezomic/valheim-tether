@@ -1,9 +1,13 @@
 # Changelog
 
-## 0.2.0 - 2026-08-17
+## 0.1.0 - 2026-08-17
 
-Core is no longer required. Tether installs and runs on BepInEx alone, and installing it from
-Thunderstore no longer pulls anything else in with it.
+First release. One chest tied to one bench, and crafting at that bench can reach into it.
+
+### Core is optional
+
+Tether installs and runs on BepInEx alone, and installing it from Thunderstore does not pull
+anything else in with it.
 
 Nothing was lost in the split. Core was carrying exactly one call, and the reason usually given
 for insisting on it does not apply to this mod: that reason is a mod registering a prefab or
@@ -35,10 +39,6 @@ Neither is a safety question here.
 Only a server can refuse anybody, so a client's copy of the setting governs nothing more than
 what its own log complains about. It is read once at startup, so changing it wants a server
 restart rather than a reconnect.
-
-## 0.1.0 - 2026-08-16
-
-First release. One chest tied to one bench, and crafting at that bench can reach into it.
 
 ### The link
 

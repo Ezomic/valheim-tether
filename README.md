@@ -144,7 +144,7 @@ untouched and comes back when you leave.
 
 ## Status
 
-Version 0.2. It builds and loads, standalone and with Core. It has not been playtested, which
+Version 0.1. It builds and loads, standalone and with Core. It has not been playtested, which
 is the only reason it is not 1.0.
 
 ## Building
