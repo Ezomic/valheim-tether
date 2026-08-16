@@ -2,90 +2,137 @@
 
 One chest, one bench. Crafting at that bench can reach into that chest.
 
-Built against the installed game (0.221.12, Unity 6000.0.61, BepInEx 5.4.23.3, Harmony 2.9).
+## Installing
 
-## The constraint is the design
+Needs BepInEx and Longhouse Core. Through a mod manager that is two installs and the manager
+handles the second one. By hand, put `Tether.dll` in `BepInEx/plugins/Tether/`.
 
-The mod this replaces pulls from *every* container in range, which quietly turns your whole
-base into one inventory — you stop organising anything because there is no reason to.
-
-Tether links **exactly one chest to one bench**. Your forge gets its metal chest, your
-workbench gets its wood-and-leather chest, and keeping them stocked is still a thing you
-do. It saves the walk back and forth; it does not abolish storage as a concern.
-
-That rule is structural rather than enforced: the link is stored on the *station's* ZDO, so
-a station holds one value and tethering a second chest simply replaces the first. A chest
-serving more than one bench is a different question and is allowed.
+Start the game once and quit if you want the config file to edit. It does not exist until the
+mod has loaded once, which is the usual reason people think a setting is missing.
 
 ## Using it
 
-Look at a chest and press **Numpad 7**. It tethers to the nearest bench in range. Press
-again on a tethered chest to release it.
+Look at a chest and press Keypad Plus.
 
-One step rather than two — no selecting the bench first — because the bench is never
-ambiguous in practice: you are standing at it. It is also the same verb Thralls already uses
-for setting a thrall's drop-off chest, so there is nothing new to learn.
+Which end you are looking at changes what the press means, because the useful answer is
+different from each side. From a chest it ties that chest to everything you could work at
+around it, every bench, forge, smelter and kiln in range, in one press. A chest standing in
+the middle of a work area is usually meant to serve the work area. From a single bench or
+smelter it ties that one station to the nearest chest and leaves its neighbours alone.
 
-Standing between a workbench and a forge gives you both their chests. Each bench still has
-exactly one.
+Press again to release. From a chest it only counts as a release when everything in range is
+already on that chest, so walking up to a half-tethered cluster and pressing once finishes the
+job rather than undoing half of it.
 
-## Status: v0.1 — untested
+There is no selecting a partner first, in either direction. The thing you are standing at is
+never ambiguous in practice. It is also the same press Thralls uses for setting a drop-off
+chest, so there is nothing new to learn.
 
-Built and compiling. Not yet playtested.
+The key is Keypad Plus rather than a number because Thralls already holds Keypad 0 through 6,
+and Keypad 7 fired its time-of-day tool on the same press. Change it in the config if you want
+it somewhere else.
 
-## Design notes
+## What each station remembers
 
-**Everything funnels through two methods.** Every requirement check and every consumption
-in Valheim ends up at `Inventory.CountItems` and `Inventory.RemoveItem` on the player's own
-inventory. Patching those is the whole mod.
+Each station holds exactly one chest. Tethering a second one replaces the first without
+asking. That is not a rule the mod enforces, it is the shape of what it stores: the link lives
+on the station, and a station has one slot.
 
-**But they are called constantly by everything else**, so patching unconditionally would
-have chest contents bleeding into inventory weight, item counts and the hotbar. Hence a
-scope flag: `Player.HaveRequirementItems`, `Player.HaveRequirements(Piece, …)` and
-`Player.ConsumeResources` bracket themselves, and the two `Inventory` patches do nothing
-unless a bracket is open.
+A chest may serve any number of stations. Standing between a workbench and a forge gives you
+both their chests at once, and each of them still has exactly one.
 
-**Consumption has to trim what vanilla removes.** The prefix takes the shortfall out of the
-chests, then sets `amount` to `carried + shortfall` so the game only removes what the
-player actually has. Without that trim, `RemoveItem` would quietly stop when it ran out and
-the recipe would be built for less than it cost.
+## Crafting
 
-**Counting the shortfall needs the patch held off.** That calculation runs inside an open
-scope, where `CountItems` already answers with the chests included — asking there would
-report nothing missing and take nothing from the chest. A suspend flag gives the true
-carried count.
+While you are crafting, upgrading or building, anything in a tethered chest counts as
+something you are carrying. The requirement counts include it and building takes it out of the
+chest. The stations consulted are the ones whose own build range covers where you are
+standing, so it follows the same reach the game already uses to decide whether a bench is
+close enough to work at.
 
-**No explicit container save.** `Inventory.RemoveItem` ends in `Changed()`, and `Container`
-wires that to its own `OnContainerChanged`, which persists it. Ownership is claimed first,
-since editing a shared object you do not own is a change that may just be overwritten.
+Outside those moments nothing changes. A tethered chest adds nothing to your carry weight,
+does not show up in your item counts and does not feed your hotbar. Most of the care in this
+mod goes into when it is listening rather than what it does.
 
-**Reflection targets are checked at startup** — `CraftingStation.m_allStations` and
-`Player.m_hovering` are both private, and `AccessTools` answers a name it cannot find with
-`null`. They are verified in `Awake` and named in an error if missing, rather than surfacing
-later as an unexplained `NullReferenceException`.
+A cost split across both ends works. If a recipe wants twenty wood and you have eight, the
+chest covers the other twelve and the total taken is twenty.
 
-### Not covered yet
+## Feeding a smelter
 
-Recipes using `m_requireOnlyOneIngredient` resolve through
-`Player.FindClosestRequirementItem`, which returns an actual item rather than a count. That
-path is not patched, so those few recipes still only see your own inventory.
+A chest tethered to a smelter, charcoal kiln, blast furnace, windmill or spinning wheel can
+supply it when you add fuel or ore. Walk up and press Use as normal, and the coal comes out of
+the chest rather than your pack. Empty handed, the station takes whatever the chest has that it
+accepts.
 
-The crafting UI's have/need numbers come from `InventoryGui`, which is also unpatched — a
-recipe may craft successfully while its requirement line still looks short. Worth fixing
-once the core is confirmed working.
+This is deliberately not automation. A hopper that feeds itself removes the fuel system from
+the game: you stop thinking about coal and the mid-game logistics problem quietly stops
+existing. What this takes away is the carrying, not the deciding. You still walk over and you
+still press the button.
 
-## Config
+One press draws up to three, which is the batch a hold-Use press uses, so there is something
+for it to work with. Anything spare stays in your pack, which is where material you took out
+of a chest belongs. `FeedSmelters = false` turns this off and leaves the crafting side alone.
 
-`BepInEx\config\ezomic.valheim.tether.cfg`
+## Why only one chest
 
-| Key | Default | What it does |
+The mod this replaces pulls from every container in range. That quietly turns a base into a
+single inventory, and once it has, there is no reason to organise anything, because everything
+is already everywhere.
+
+Tether links one chest to one bench. Your forge gets its metal chest, your workbench gets its
+wood and leather chest, and keeping them stocked is still something you do. It saves the walk.
+It does not abolish storage as a concern.
+
+## Settings
+
+`BepInEx/config/ezomic.valheim.tether.cfg`
+
+| Setting | Default | What it does |
 | --- | --- | --- |
-| `Enabled` | `true` | Off ignores links without forgetting them |
-| `KeyTether` | `Keypad7` | Tether or release the chest you are looking at |
+| `Enabled` | `true` | Off ignores every link without forgetting any of them |
+| `KeyTether` | `KeypadPlus` | Tether or release what you are looking at |
+| `FeedSmelters` | `true` | Let a tethered chest supply the smelter or kiln it is tied to |
+| `SmelterRange` | `6` | How close a chest has to be to a smelter to tether to it |
+| `PullAmount` | `3` | How much one press draws out of the chest |
 | `Messages` | `true` | Corner messages on tether and release |
 | `Verbose` | `false` | Log every withdrawal from a tethered chest |
 
-Numpad 0–6 are already taken by Thralls, hence 7.
+Benches use their own build range rather than `SmelterRange`, because a crafting station
+carries that number itself and it is the honest answer for anything you can work at. A smelter
+has no such field, which is what the setting is for.
+
+## What it does not cover
+
+Recipes that take any one of several ingredients resolve through a different path in the game,
+one that hands back an item rather than a count. Those few recipes still see only your own
+inventory.
+
+The have and need numbers in the crafting panel are drawn by the game's own interface, which
+is not patched. A recipe can craft successfully while its requirement line still reads short.
+
+A link remembers a chest by where it stands. Pick a chest up and put it down again more than a
+couple of metres from where it was and the link stops resolving, quietly. Tether it again.
+
+Output is not collected. A smelter's iron still drops on the ground and you still pick it up.
+The tether runs one way on purpose. Returning the product as well would close the loop and
+leave the smelter running itself, which is the thing the one-chest rule exists to avoid.
+
+## Multiplayer
+
+Install it on the server as well as on every client. Core's version gate is set to require it
+on both ends, so a player without it is refused rather than let in with the feature missing.
+
+Links live on the station and are shared, so a chest one player tethers is tethered for
+everyone. Ownership of a chest is claimed before anything is taken out of it, because writing
+to a shared object you do not own is a change that may simply be discarded.
+
+Core also makes the host's settings the ones that count for as long as you are connected. A
+server that sets `Enabled = false` turns the mod off for everybody on it, and your own file is
+untouched and comes back when you leave.
+
+## Status
+
+Version 0.1. It builds, loads and passes the version gate. It has not been playtested, which
+is the only reason it is not 1.0.
 
 ## Building
 
@@ -93,20 +140,10 @@ Numpad 0–6 are already taken by Thralls, hence 7.
 dotnet build
 ```
 
-Or build every own-mod into the shared play profile with
-`valheim-own-profile\build-all.ps1`.
-
-## What to check
-
-1. Tether a chest to a workbench, put wood in it, and build something with an empty pack.
-2. Confirm the wood actually leaves the chest.
-3. **Split a cost across both** — some in your pack, some in the chest — and confirm the
-   total taken is right and nothing is duplicated or eaten twice.
-4. Tether a second chest to the same bench; the first should be released.
-5. Walk away from the bench and confirm the chest no longer counts.
-6. Check that ordinary inventory weight and item counts are unaffected.
+Deploys to `testprofile/` by default. `own-profile/build-all.ps1` builds every mod in the
+suite into the shared play profile instead.
 
 ## Author
 
-Tether is an original mod by **Robbin Thijssen** (Thijssen Software).
-Copyright (c) 2026 Robbin Thijssen. MIT licensed — see `LICENSE`.
+Tether is an original mod by Robbin Thijssen (Thijssen Software).
+Copyright (c) 2026 Robbin Thijssen. MIT licensed, see `LICENSE`.

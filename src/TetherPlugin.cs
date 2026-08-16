@@ -28,10 +28,21 @@ namespace Tether
         {
             Log = Logger;
             TetherConfig.Bind(Config);
-            // Everyone, not HostOnly. Both ends have to agree about this mod, and the
-            // disagreement is silent when they do not: a client that cannot resolve a prefab
-            // hash discards the ZDO rather than erroring - destroying what is already standing
-            // in the world - and item data that differs desyncs inventories.
+            // Everyone rather than HostOnly, and worth stating honestly: this mod does not
+            // have the failure mode Everyone exists for. That reading is for anything
+            // registering a prefab or altering item data, where a client without the mod
+            // discards ZDOs it cannot resolve and destroys what is standing in the world.
+            // Tether registers neither. Its links are ordinary ZDO values on vanilla
+            // stations, which a vanilla client stores and ignores, so a mismatched party is
+            // merely a party where some people do not have the feature.
+            //
+            // What Everyone actually buys here is that nobody is quietly playing a different
+            // game: the host's settings are the ones in force for everyone connected, and a
+            // build mismatch is caught rather than showing up as one player's chest not
+            // working. The cost is that a friend without the mod is refused entry for a
+            // convenience feature. HostOnly would let them in and still check anyone who does
+            // have it, and is arguably the right call - left as it is until multiplayer has
+            // actually been played, since changing who gets refused is not a thing to guess at.
             Suite.Register(PluginGuid, PluginName, PluginVersion, Config);
 
             TetherLinks.Verify();

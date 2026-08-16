@@ -1,50 +1,82 @@
 # Changelog
 
-Notable changes to Tether. Format follows [Keep a Changelog](https://keepachangelog.com),
-and the mod uses [semantic versioning](https://semver.org).
+## 0.1.0 - 2026-08-16
 
-## [0.1.0] — 2026-08-16
-
-First release.
+First release. One chest tied to one bench, and crafting at that bench can reach into it.
 
 ### The link
 
-- **One chest, one bench.** Crafting at that bench can reach into that chest.
-- Look at a chest and press **Numpad 7** to tether it to the nearest bench in range. Press
-  again on a tethered chest to release it.
-- One step rather than two, with no selecting the bench first, because the bench is never
-  ambiguous in practice — you are standing at it.
-- Standing between a workbench and a forge gives you both their chests. Each bench still has
-  exactly one.
+Look at a chest and press Keypad Plus. From a chest that ties it to everything you could work
+at in range, in one press, since a chest standing in a work area is meant to serve the work
+area. From a single bench or smelter it takes the nearest chest and leaves its neighbours
+alone. Pressing again releases, and from a chest that only counts as a release when everything
+in range is already on it, so a press at a half-tethered cluster finishes it rather than
+undoing half of it.
 
-### The constraint is the design
+Either direction is one step, with no selecting a partner first, because the thing you are
+standing at is never ambiguous in practice. It is the same press Thralls uses for a drop-off
+chest.
 
-The mod this replaces pulls from *every* container in range, which quietly turns a base into
-one inventory and removes any reason to organise anything. Tether links exactly one chest to
-one bench: your forge gets its metal chest, your workbench gets its wood-and-leather chest,
-and keeping them stocked is still something you do. It saves the walk; it does not abolish
+The key is Keypad Plus and not Keypad 7. Thralls holds Keypad 0 through 6, and 7 turned out to
+fire its time-of-day tool on the same press.
+
+### The rule is the storage
+
+The link lives on the station rather than the chest, and a station has one slot. So one chest
+per station is the shape of what is stored rather than something the mod has to police, and
+tethering a second chest replaces the first. A chest serving several stations is a different
+question and is allowed.
+
+The mod this replaces pulls from every container in range, which turns a base into a single
+inventory and removes any reason to organise anything. This saves the walk without abolishing
 storage as a concern.
 
-That rule is structural rather than enforced. The link lives on the **station's** ZDO, so a
-station holds one value and tethering a second chest simply replaces the first. A chest
-serving more than one bench is a different question, and is allowed.
+### Feeding a smelter
+
+A chest tethered to a smelter, charcoal kiln, blast furnace, windmill or spinning wheel
+supplies it when you add fuel or ore. Empty handed it offers whatever the chest holds that the
+station accepts.
+
+Deliberately not automation. A hopper that feeds itself removes the fuel system from the game.
+This removes the carrying and not the deciding: you still walk over and you still press the
+button. One press draws three, matching the batch a hold-Use press works with, and anything
+spare stays in your pack.
+
+The whole of it is a prefix that moves items into your pack a moment before the game looks for
+them. Everything after that is the game's own capacity check, messages and effects, which is
+what should keep it in step through an update.
 
 ### Correctness
 
-- Every requirement check and every consumption in Valheim funnels through
-  `Inventory.CountItems` and `Inventory.RemoveItem`, so patching those is the whole mod — but
-  they are called constantly by everything else, so the patches do nothing unless one of the
-  three crafting entry points has opened a scope. Without that, chest contents bleed into
-  inventory weight, item counts and the hotbar.
-- **Consumption trims what vanilla removes**, taking the shortfall from the chest and leaving
-  the game to remove only what the player actually has. Without the trim, `RemoveItem` stops
-  when it runs out and the recipe is built for less than it cost.
-- Ownership is claimed before editing a chest, since writing to a shared object you do not
-  own is a change that may simply be discarded.
-- Loads on dedicated servers, and declares to Core's version gate.
+Every requirement check and every consumption in Valheim funnels through `Inventory.CountItems`
+and `Inventory.RemoveItem`, so patching those two is the whole mod. They are also called
+constantly by everything else, so they do nothing unless one of the three crafting entry points
+has opened a scope. Without that, chest contents bleed into carry weight, item counts and the
+hotbar.
+
+Consumption trims what the game removes. The shortfall comes out of the chest first, and the
+amount is then cut to what you are actually carrying. Without that trim `RemoveItem` stops when
+it runs out and the recipe is built for less than it cost.
+
+Counting the shortfall has to hold the counting patch off, because that sum runs inside an open
+scope where the count already includes the chest. Asking there reports nothing missing and
+takes nothing.
+
+Ownership of a chest is claimed before it is edited, since writing to a shared object you do
+not own is a change that may simply be discarded.
+
+The two private fields the mod reflects on are checked at startup and named in an error if a
+game update ever removes them, rather than surfacing later as an unexplained null reference.
+
+It loads on a dedicated server and declares itself to Core's version gate.
 
 ### Known limits
 
-- **Untested in a real session.** It builds and compiles; it has not been playtested, which
-  is why this is 0.1 and not 1.0. The feature is complete as described above — what is
-  missing is evidence that it behaves.
+Untested in a real session. It builds, loads and passes the gate, and that is all that has been
+established. The feature is complete as described; what is missing is evidence that it behaves.
+
+Recipes taking any one of several ingredients resolve through a path that hands back an item
+rather than a count, and are not covered. The have and need numbers in the crafting panel are
+drawn by the game's own interface and are not patched, so a recipe can craft while its
+requirement line reads short. A link remembers a chest by position, so moving a chest more than
+a couple of metres breaks it quietly. Output is not collected, on purpose.

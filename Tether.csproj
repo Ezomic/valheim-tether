@@ -9,7 +9,7 @@
     <Authors>Robbin Thijssen</Authors>
     <Company>Thijssen Software</Company>
     <Product>Tether</Product>
-    <Description>Link one chest to one crafting bench.</Description>
+    <Description>One chest, one bench. Crafting there draws from that chest, and a tethered smelter takes its fuel from it.</Description>
     <Copyright>Copyright (c) 2026 Robbin Thijssen</Copyright>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
