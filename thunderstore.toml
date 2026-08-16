@@ -9,7 +9,7 @@ namespace = "Ezomic"
 name = "Tether"
 versionNumber = "0.1.0"
 description = "Link one chest to one crafting bench."
-websiteUrl = ""
+websiteUrl = "https://github.com/Ezomic/valheim-tether"
 containsNsfwContent = false
 
 [package.dependencies]
