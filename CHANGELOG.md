@@ -1,44 +1,15 @@
 # Changelog
 
-## 0.1.0 - 2026-08-17
+## 0.1.0 - 2026-08-18
 
 First release. One chest tied to one bench, and crafting at that bench can reach into it.
 
-### Core is optional
+### No dependencies
 
-Tether installs and runs on BepInEx alone, and installing it from Thunderstore does not pull
-anything else in with it.
-
-Nothing was lost in the split. Core was carrying exactly one call, and the reason usually given
-for insisting on it does not apply to this mod: that reason is a mod registering a prefab or
-altering item data, where a client without it discards ZDOs it cannot resolve and destroys what
-is already standing in the world. Tether registers no prefabs and no items. A link is an
-ordinary value on a vanilla station, which a vanilla client stores and ignores. So a party
-where only some people have it is just a party where only some people have the feature.
-
-The dependency is soft rather than hard, because a hard dependency that is absent does not
-degrade gracefully, it stops the plugin loading at all. Core is looked up in the chainloader
-and registered with only when it is actually there. The registering itself sits in its own
-method that is never inlined: the JIT resolves the assemblies a method needs the first time it
-compiles that method, so a Core call sitting directly in `Awake` would drag the assembly in
-before the check could prevent it, and the missing-assembly error would land during plugin
-load, which is the exact failure the arrangement exists to avoid.
-
-### Requiring it on a server
-
-With Core installed, `RequireOnClients` decides whether a player without Tether can join at
-all. On, which is the default, the server refuses them at the door with a message naming the
-mod, rather than letting them into a game that quietly works differently for them. Off lets
-them in, and anyone who does have it is still checked for a version or build mismatch.
-
-That is a per-server judgement rather than a per-mod one, which is why it is a line in a file.
-A server where the mod is part of how the place plays wants it on. Someone who added Tether for
-themselves and does not want friends turned away over a convenience feature wants it off.
-Neither is a safety question here.
-
-Only a server can refuse anybody, so a client's copy of the setting governs nothing more than
-what its own log complains about. It is read once at startup, so changing it wants a server
-restart rather than a reconnect.
+BepInEx and nothing else. Tether registers no prefabs and no items, which is why a mixed
+party is safe: a link is an ordinary value on a vanilla station, and a client without the
+mod stores it and ignores it. Nothing standing in a world depends on Tether being there,
+so adding it or taking it away breaks nothing that has already been built.
 
 ### The link
 
@@ -104,7 +75,7 @@ not own is a change that may simply be discarded.
 The two private fields the mod reflects on are checked at startup and named in an error if a
 game update ever removes them, rather than surfacing later as an unexplained null reference.
 
-It loads on a dedicated server and declares itself to Core's version gate.
+It loads on a dedicated server as well as a client.
 
 ### Known limits
 
